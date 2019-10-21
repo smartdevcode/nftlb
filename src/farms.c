@@ -174,8 +174,7 @@ static int farm_validate(struct farm *f)
 	}
 
 	if (farm_is_ingress_mode(f) &&
-		(!f->iethaddr || strcmp(f->iethaddr, "") == 0) &&
-		(!f->oethaddr || strcmp(f->oethaddr, "") == 0))
+		(!f->iethaddr || strcmp(f->iethaddr, "") == 0))
 		return 0;
 
 	return 1;
@@ -263,7 +262,7 @@ static int farm_set_mark(struct farm *f, int new_value)
 	syslog(LOG_DEBUG, "%s():%d: farm %s old mark %d new mark %d", __FUNCTION__, __LINE__, f->name, old_value, new_value);
 
 	if (f->mode != VALUE_MODE_DNAT && f->mode != VALUE_MODE_SNAT) {
-		syslog(LOG_ERR, "%s():%d: mark for farm %s not available for the current mode %d", __FUNCTION__, __LINE__, f->name, f->mode);
+		syslog(LOG_INFO, "%s():%d: mark for farm %s not available for the current mode %d", __FUNCTION__, __LINE__, f->name, f->mode);
 		return 0;
 	}
 
@@ -515,6 +514,21 @@ static int farm_set_estconnlimit(struct farm *f, int new_value)
 	return PARSER_OK;
 }
 
+int farm_set_priority(struct farm *f, int new_value)
+{
+	int old_value = f->priority;
+
+	syslog(LOG_DEBUG, "%s():%d: current value is %d, but new value will be %d",
+	       __FUNCTION__, __LINE__, old_value, new_value);
+
+	if (new_value <= 0)
+		return -1;
+
+	f->priority = new_value;
+
+	return 0;
+}
+
 void farm_s_print(void)
 {
 	struct list_head *farms = obj_get_farms();
@@ -569,6 +583,12 @@ int farm_set_ifinfo(struct farm *f, int key)
 
 	switch (key) {
 	case KEY_IFACE:
+		if (f->iface && strcmp(f->iface, IFACE_LOOPBACK) == 0) {
+			syslog(LOG_DEBUG, "%s():%d: farm %s doesn't require input netinfo, loopback interface", __FUNCTION__, __LINE__, f->name);
+			f->ifidx = 0;
+			return 0;
+		}
+
 		ret = net_get_local_ifname_per_vip(f->virtaddr, if_str);
 
 		if (ret != 0) {
@@ -593,7 +613,7 @@ int farm_set_ifinfo(struct farm *f, int key)
 		net_strim_netface(f->iface);
 
 		/* By default, use the same inbound and outbound interface until
-		 * the backends network configuration say a different thing */
+		 * the backends network configuration says a different thing */
 		if (f->ofidx == DEFAULT_IFIDX) {
 			f->ofidx = f->ifidx;
 			obj_set_attribute_string(f->iface, &f->oface);
@@ -604,12 +624,19 @@ int farm_set_ifinfo(struct farm *f, int key)
 
 		obj_set_attribute_string(streth, ether_addr);
 		break;
+
 	case KEY_OFACE:
+		if (f->oface && strcmp(f->oface, IFACE_LOOPBACK) == 0) {
+			syslog(LOG_DEBUG, "%s():%d: farm %s doesn't require output netinfo, loopback interface", __FUNCTION__, __LINE__, f->name);
+			f->ofidx = 0;
+			return 0;
+		}
+
 		ether_addr = &f->oethaddr;
 
 		b = backend_get_first(f);
 		if (!b || b->ipaddr == DEFAULT_IPADDR) {
-			syslog(LOG_ERR, "%s():%d: there is no backend yet in the farm %s", __FUNCTION__, __LINE__, f->name);
+			syslog(LOG_DEBUG, "%s():%d: there is no backend yet in the farm %s", __FUNCTION__, __LINE__, f->name);
 			return 0;
 		}
 
@@ -628,13 +655,6 @@ int farm_set_ifinfo(struct farm *f, int key)
 
 		obj_set_attribute_string(if_str, &f->oface);
 		net_strim_netface(f->oface);
-
-		net_get_local_ifinfo((unsigned char **)&ether, f->oface);
-		sprintf(streth, "%02x:%02x:%02x:%02x:%02x:%02x", ether[0],
-			ether[1], ether[2], ether[3], ether[4], ether[5]);
-
-		obj_set_attribute_string(streth, ether_addr);
-
 		break;
 	}
 
@@ -762,8 +782,7 @@ int farm_set_attribute(struct config_pair *c)
 		ret = PARSER_OK;
 		break;
 	case KEY_ETHADDR:
-		ret = obj_set_attribute_string(c->str_value, &f->iethaddr) ||
-			obj_set_attribute_string(c->str_value, &f->oethaddr);
+		ret = obj_set_attribute_string(c->str_value, &f->iethaddr);
 		break;
 	case KEY_VIRTADDR:
 		ret = obj_set_attribute_string(c->str_value, &f->virtaddr);
@@ -801,7 +820,7 @@ int farm_set_attribute(struct config_pair *c)
 		ret = PARSER_OK;
 		break;
 	case KEY_PRIORITY:
-		f->priority = c->int_value;
+		farm_set_priority(f, c->int_value);
 		ret = PARSER_OK;
 		break;
 	case KEY_HELPER:
@@ -816,7 +835,10 @@ int farm_set_attribute(struct config_pair *c)
 		ret = farm_set_mark(f, c->int_value);
 		break;
 	case KEY_STATE:
-		ret = farm_set_state(f, c->int_value);
+		if (c->int_value != VALUE_STATE_CONFERR)
+			ret = farm_set_state(f, c->int_value);
+		else
+			ret = PARSER_OK;
 		break;
 	case KEY_ACTION:
 		ret = farm_set_action(f, c->int_value);

@@ -3,7 +3,8 @@
 		{
 			"name" : "lb01",
 			"family" : "ipv4",
-			"virtual-addr" : "192.168.0.154",
+			"virtual-addr" : "10.0.0.6",
+			"ether-addr" : "01:01:01:01:01:01",
 			"virtual-ports" : "80-88,90-95,96",
 			"mode" : "stlsdnat",
 			"protocol" : "tcp",
@@ -67,7 +68,6 @@
 					"state" : "up"
 				}
 			],
-			"ether-addr" : "01:01:01:01:01:01",
 			"iface" : "lo",
 			"oface" : "lo"
 		}
