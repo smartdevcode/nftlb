@@ -1,4 +1,0 @@
-VERB="POST"
-URI="farms"
-DESC="Disable persistence in farm lb01... "
-FILE="data.json"

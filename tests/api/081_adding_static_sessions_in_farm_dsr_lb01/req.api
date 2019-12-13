@@ -1,4 +1,0 @@
-VERB="POST"
-URI="farms"
-DESC="Adding static sessions in farm lb01... "
-FILE="data.json"

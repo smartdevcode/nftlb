@@ -34,7 +34,6 @@ struct policy {
 	struct list_head	list;
 	char				*name;
 	int					type;
-	int					family;
 	int					timeout;
 	int					priority;
 	int					total_elem;

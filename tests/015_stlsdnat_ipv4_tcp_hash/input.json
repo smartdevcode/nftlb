@@ -4,6 +4,7 @@
 			"name" : "lb01",
 			"family" : "ipv4",
 			"virtual-addr" : "192.168.0.100",
+			"ether-addr" : "01:01:01:01:01:01",
 			"virtual-ports" : "80",
 			"mode" : "stlsdnat",
 			"protocol" : "tcp",
@@ -28,8 +29,7 @@
 				}
 			],
 			"iface" : "lo",
-			"oface" : "lo",
-			"ether-addr" : "01:01:01:01:01:01"
+			"oface" : "lo"
 		}
 	]
 }
