@@ -1,4 +1,0 @@
-VERB="POST"
-URI="farms"
-DESC="Send empty farms... "
-FILE="data.json"
